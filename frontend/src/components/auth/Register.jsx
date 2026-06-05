@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "../../api/axiosInstance";
 import toast from "react-hot-toast";
 
 export default function Register({ onAuth }) {
@@ -16,6 +15,12 @@ export default function Register({ onAuth }) {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    
+    if (!formData.username || !formData.email || !formData.password || !formData.phone) {
+      toast.error("Fill all fields");
+      return;
+    }
+    
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords don't match");
       return;
@@ -23,18 +28,38 @@ export default function Register({ onAuth }) {
 
     setLoading(true);
     try {
-      const res = await axios.post("/auth/register", {
+      // Get existing users from localStorage
+      const users = JSON.parse(localStorage.getItem("bettingAppUsers") || "[]");
+      
+      // Check if email already exists
+      if (users.some(u => u.email === formData.email)) {
+        toast.error("Email already registered");
+        setLoading(false);
+        return;
+      }
+
+      // Create new user with default balance
+      const newUser = {
+        id: Date.now(),
         username: formData.username,
         email: formData.email,
         password: formData.password,
         phone: formData.phone,
-      });
-      localStorage.setItem("userToken", res.token);
-      onAuth(res.user);
-      toast.success("Account created successfully!");
+        balance: 1000, // Default starting balance
+        createdAt: new Date().toISOString(),
+      };
+
+      // Save user to localStorage
+      users.push(newUser);
+      localStorage.setItem("bettingAppUsers", JSON.stringify(users));
+      localStorage.setItem("currentUser", JSON.stringify(newUser));
+      localStorage.setItem("userToken", btoa(formData.email));
+      
+      onAuth(newUser);
+      toast.success("Account created successfully! 🎉");
       navigate("/");
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Registration failed");
+      toast.error("Registration failed");
     } finally {
       setLoading(false);
     }
@@ -47,7 +72,8 @@ export default function Register({ onAuth }) {
           <h1 className="text-5xl font-black mb-2 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
             🎮 BETTING ARENA
           </h1>
-          <p className="text-gray-400">Join & Start Winning!</p>
+          <p className="text-gray-400">Join & Start Winning!
+          </p>
         </div>
 
         <form

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "../../api/axiosInstance";
 import toast from "react-hot-toast";
 
 export default function Login({ onAuth }) {
@@ -18,13 +17,24 @@ export default function Login({ onAuth }) {
 
     setLoading(true);
     try {
-      const res = await axios.post("/auth/login", { email, password });
-      localStorage.setItem("userToken", res.token);
-      onAuth(res.user);
+      // Mock authentication - Check localStorage for registered users
+      const users = JSON.parse(localStorage.getItem("bettingAppUsers") || "[]");
+      const user = users.find(u => u.email === email && u.password === password);
+      
+      if (!user) {
+        toast.error("Invalid credentials");
+        setLoading(false);
+        return;
+      }
+
+      // Store current user session
+      localStorage.setItem("currentUser", JSON.stringify(user));
+      localStorage.setItem("userToken", btoa(email)); // Simple token
+      onAuth(user);
       toast.success("Logged in successfully!");
       navigate("/");
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Login failed");
+      toast.error("Login failed");
     } finally {
       setLoading(false);
     }
@@ -81,6 +91,12 @@ export default function Login({ onAuth }) {
               Sign up now
             </Link>
           </p>
+        </div>
+
+        <div className="mt-8 p-4 bg-gray-800 rounded-lg border border-purple-500 text-center text-sm text-gray-300">
+          <p>Demo Account:</p>
+          <p>Email: <span className="text-purple-300 font-mono">demo@betting.com</span></p>
+          <p>Password: <span className="text-purple-300 font-mono">demo123</span></p>
         </div>
       </div>
     </div>
